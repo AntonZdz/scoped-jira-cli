@@ -3,6 +3,11 @@ import { registerIssueCommands } from "./commands/issue.js";
 import { registerCommentCommands } from "./commands/comment.js";
 import { registerLinkCommands } from "./commands/link.js";
 import { registerSearchCommand } from "./commands/search.js";
+import { registerProjectCommands } from "./commands/project.js";
+import { registerBoardCommands } from "./commands/board.js";
+import { registerSprintCommands } from "./commands/sprint.js";
+import { registerEpicCommands } from "./commands/epic.js";
+import { registerWorklogCommands } from "./commands/worklog.js";
 import { ConfigError } from "./config.js";
 import { JiraApiError, CloudIdError } from "./client/errors.js";
 
@@ -25,6 +30,11 @@ registerIssueCommands(program);
 registerCommentCommands(program);
 registerLinkCommands(program);
 registerSearchCommand(program);
+registerProjectCommands(program);
+registerBoardCommands(program);
+registerSprintCommands(program);
+registerEpicCommands(program);
+registerWorklogCommands(program);
 
 async function main(): Promise<void> {
   try {

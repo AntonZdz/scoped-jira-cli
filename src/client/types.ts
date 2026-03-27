@@ -189,3 +189,74 @@ export interface CreateMetaResponse {
   total: number;
   issueTypes: CreateMetaIssueType[];
 }
+
+// ── Projects ────────────────────────────────────────────────────────
+
+export interface JiraProjectDetail {
+  id: string;
+  key: string;
+  name: string;
+  projectTypeKey: string;
+  lead?: JiraUser;
+}
+
+export interface ProjectSearchResponse {
+  startAt: number;
+  maxResults: number;
+  total: number;
+  values: JiraProjectDetail[];
+}
+
+// ── Boards (Agile) ──────────────────────────────────────────────────
+
+export interface JiraBoard {
+  id: number;
+  name: string;
+  type: string;
+  location?: {
+    projectId: number;
+    projectKey: string;
+    projectName: string;
+  };
+}
+
+export interface BoardsResponse {
+  maxResults: number;
+  startAt: number;
+  total: number;
+  isLast: boolean;
+  values: JiraBoard[];
+}
+
+// ── Sprints (Agile) ─────────────────────────────────────────────────
+
+export interface JiraSprint {
+  id: number;
+  name: string;
+  state: string;
+  startDate?: string;
+  endDate?: string;
+  completeDate?: string;
+  goal?: string;
+}
+
+export interface SprintsResponse {
+  maxResults: number;
+  startAt: number;
+  isLast: boolean;
+  values: JiraSprint[];
+}
+
+// ── Worklogs ────────────────────────────────────────────────────────
+
+export interface JiraWorklog {
+  id: string;
+  self: string;
+  author: JiraUser;
+  timeSpent: string;
+  timeSpentSeconds: number;
+  comment?: AdfDocument;
+  created: string;
+  updated: string;
+  started: string;
+}

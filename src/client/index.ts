@@ -12,6 +12,10 @@ import type {
   IssueUpdatePayload,
   IssueLinkRequest,
   CreateMetaResponse,
+  ProjectSearchResponse,
+  BoardsResponse,
+  SprintsResponse,
+  JiraWorklog,
   AdfDocument,
 } from "./types.js";
 
@@ -19,6 +23,7 @@ import type {
 
 const ISSUE_KEY_RE = /^[A-Z][A-Z0-9_]+-\d+$/;
 const PROJECT_KEY_RE = /^[A-Z][A-Z0-9_]+$/;
+const NUMERIC_ID_RE = /^\d+$/;
 
 function validateIssueKey(key: string): string {
   if (!ISSUE_KEY_RE.test(key)) {
@@ -32,6 +37,13 @@ function validateProjectKey(key: string): string {
     throw new Error(`Invalid project key format: "${key}". Expected format: PROJ`);
   }
   return encodeURIComponent(key);
+}
+
+function validateNumericId(id: string, label: string): string {
+  if (!NUMERIC_ID_RE.test(id)) {
+    throw new Error(`Invalid ${label}: "${id}". Expected a numeric ID.`);
+  }
+  return id;
 }
 
 export class JiraClient {
@@ -73,9 +85,9 @@ export class JiraClient {
 
   // ── HTTP primitives ─────────────────────────────────────────────
 
-  private async gatewayUrl(path: string): Promise<string> {
+  private async buildUrl(path: string, apiBase = "/rest/api/3"): Promise<string> {
     const cloudId = await this.resolveCloudId();
-    return `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3${path}`;
+    return `https://api.atlassian.com/ex/jira/${cloudId}${apiBase}${path}`;
   }
 
   private async request<T>(
@@ -83,7 +95,24 @@ export class JiraClient {
     path: string,
     body?: unknown,
   ): Promise<T> {
-    const url = await this.gatewayUrl(path);
+    return this.executeRequest<T>(method, path, body, "/rest/api/3");
+  }
+
+  private async requestAgile<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+  ): Promise<T> {
+    return this.executeRequest<T>(method, path, body, "/rest/agile/1.0");
+  }
+
+  private async executeRequest<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    apiBase?: string,
+  ): Promise<T> {
+    const url = await this.buildUrl(path, apiBase);
 
     const res = await fetch(url, {
       method,
@@ -209,5 +238,86 @@ export class JiraClient {
       "GET",
       `/issue/createmeta/${validateProjectKey(projectKey)}/issuetypes`,
     );
+  }
+
+  // ── Assign ──────────────────────────────────────────────────────
+
+  async assignIssue(
+    issueKey: string,
+    accountId: string | null,
+  ): Promise<void> {
+    return this.request<void>(
+      "PUT",
+      `/issue/${validateIssueKey(issueKey)}/assignee`,
+      { accountId },
+    );
+  }
+
+  // ── Worklog ─────────────────────────────────────────────────────
+
+  async addWorklog(
+    issueKey: string,
+    timeSpent: string,
+    comment?: AdfDocument,
+  ): Promise<JiraWorklog> {
+    return this.request<JiraWorklog>(
+      "POST",
+      `/issue/${validateIssueKey(issueKey)}/worklog`,
+      { timeSpent, ...(comment && { comment }) },
+    );
+  }
+
+  // ── Projects ────────────────────────────────────────────────────
+
+  async listProjects(maxResults = 50): Promise<ProjectSearchResponse> {
+    return this.request<ProjectSearchResponse>(
+      "GET",
+      `/project/search?maxResults=${maxResults}`,
+    );
+  }
+
+  // ── Boards (Agile) ─────────────────────────────────────────────
+
+  async listBoards(
+    projectKeyOrId?: string,
+    maxResults = 50,
+  ): Promise<BoardsResponse> {
+    const params = new URLSearchParams({ maxResults: String(maxResults) });
+    if (projectKeyOrId) params.set("projectKeyOrId", projectKeyOrId);
+    return this.requestAgile<BoardsResponse>("GET", `/board?${params}`);
+  }
+
+  // ── Sprints (Agile) ────────────────────────────────────────────
+
+  async listSprints(
+    boardId: string,
+    state?: string,
+    maxResults = 50,
+  ): Promise<SprintsResponse> {
+    const safeId = validateNumericId(boardId, "board ID");
+    const params = new URLSearchParams({ maxResults: String(maxResults) });
+    if (state) params.set("state", state);
+    return this.requestAgile<SprintsResponse>(
+      "GET",
+      `/board/${safeId}/sprint?${params}`,
+    );
+  }
+
+  async addToSprint(sprintId: string, issueKeys: string[]): Promise<void> {
+    const safeId = validateNumericId(sprintId, "sprint ID");
+    issueKeys.forEach((k) => validateIssueKey(k));
+    return this.requestAgile<void>("POST", `/sprint/${safeId}/issue`, {
+      issues: issueKeys,
+    });
+  }
+
+  // ── Epics (Agile) ──────────────────────────────────────────────
+
+  async addToEpic(epicKey: string, issueKeys: string[]): Promise<void> {
+    const safeKey = validateIssueKey(epicKey);
+    issueKeys.forEach((k) => validateIssueKey(k));
+    return this.requestAgile<void>("POST", `/epic/${safeKey}/issue`, {
+      issues: issueKeys,
+    });
   }
 }

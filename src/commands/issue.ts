@@ -209,6 +209,66 @@ export function registerIssueCommands(program: Command): void {
       console.log(`Transitioned ${issueKey} to "${match.to.name}"`);
     });
 
+  // ── sjira issue assign ──────────────────────────────────────────
+
+  issue
+    .command("assign <issueKey> [accountId]")
+    .description("Assign an issue (omit accountId to unassign)")
+    .action(async (issueKey: string, accountId: string | undefined) => {
+      const client = new JiraClient(loadConfig());
+      await client.assignIssue(issueKey, accountId ?? null);
+      if (accountId) {
+        console.log(`Assigned ${issueKey} to ${accountId}`);
+      } else {
+        console.log(`Unassigned ${issueKey}`);
+      }
+    });
+
+  // ── sjira issue clone ─────────────────────────────────────────
+
+  issue
+    .command("clone <issueKey>")
+    .description("Clone an issue")
+    .option("-s, --summary <text>", "Override summary for the clone")
+    .option("--link-type <name>", "Link type to original (e.g. Cloners)", "Cloners")
+    .option("--no-link", "Do not link clone to original")
+    .action(async (issueKey: string, opts: Record<string, unknown>, cmd: Command) => {
+      const client = new JiraClient(loadConfig());
+      const format = getFormat(cmd);
+
+      const original = await client.getIssue(issueKey);
+      const f = original.fields;
+
+      const fields: IssueCreateFields = {
+        project: { key: f.project.key },
+        issuetype: { name: f.issuetype.name },
+        summary: (opts.summary as string) ?? `Clone of ${f.summary}`,
+      };
+
+      if (f.description) fields.description = f.description;
+      if (f.priority) fields.priority = { name: f.priority.name };
+      if (f.labels?.length) fields.labels = f.labels;
+      if (f.components?.length) {
+        fields.components = f.components.map((c) => ({ name: c.name }));
+      }
+
+      const clone = await client.createIssue(fields);
+
+      if (opts.link !== false) {
+        try {
+          await client.createLink({
+            type: { name: opts.linkType as string },
+            inwardIssue: { key: clone.key },
+            outwardIssue: { key: issueKey },
+          });
+        } catch {
+          // Link failure is non-fatal — the clone was already created
+        }
+      }
+
+      console.log(formatCreated(clone, format));
+    });
+
   // ── sjira issue delete ────────────────────────────────────────
 
   issue

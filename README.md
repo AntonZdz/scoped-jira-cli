@@ -59,10 +59,19 @@ sjira issue get PROJ-123 --fields summary,status,assignee
 # Update
 sjira issue update PROJ-123 -s "New summary" --add-label urgent --remove-label stale --priority Critical
 
+# Assign / unassign
+sjira issue assign PROJ-123 5b10ac8d82e05b22cc7d4ef5
+sjira issue assign PROJ-123                              # unassign
+
 # Transition
-sjira issue transition PROJ-123 --list                  # show available transitions
-sjira issue transition PROJ-123 --to "In Progress"      # by name or target status
-sjira issue transition PROJ-123 --id 21                 # by transition ID
+sjira issue transition PROJ-123 --list                   # show available transitions
+sjira issue transition PROJ-123 --to "In Progress"       # by name or target status
+sjira issue transition PROJ-123 --id 21                  # by transition ID
+
+# Clone
+sjira issue clone PROJ-123                               # clone with link to original
+sjira issue clone PROJ-123 -s "Custom summary"           # override summary
+sjira issue clone PROJ-123 --no-link                     # clone without linking
 
 # Delete
 sjira issue delete PROJ-123
@@ -88,6 +97,35 @@ sjira link add PROJ-123 PROJ-456 -t Relates -c "These are related"
 sjira search -j "project = PROJ AND status = 'In Progress'"
 sjira search -j "assignee = currentUser() ORDER BY updated DESC" --limit 50
 sjira search -j "labels = deploy" --fields summary,status
+```
+
+### Projects & Boards
+
+```bash
+sjira project list
+sjira board list                          # all boards
+sjira board list -p PROJ                  # boards for a project
+```
+
+### Sprints
+
+```bash
+sjira sprint list -b 42                   # list sprints for board 42
+sjira sprint list -b 42 --state active    # filter by state
+sjira sprint add 100 PROJ-1 PROJ-2       # add issues to sprint 100
+```
+
+### Epics
+
+```bash
+sjira epic add PROJ-100 PROJ-1 PROJ-2    # add issues to an epic
+```
+
+### Work Logs
+
+```bash
+sjira worklog add PROJ-123 -t "2h 30m"
+sjira worklog add PROJ-123 -t "1d" -c "Completed refactoring"
 ```
 
 ### Custom Fields

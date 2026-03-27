@@ -4,6 +4,10 @@ import type {
   JiraTransition,
   CreatedIssue,
   SearchResponse,
+  JiraProjectDetail,
+  JiraBoard,
+  JiraSprint,
+  JiraWorklog,
 } from "../client/types.js";
 import { adfToText } from "./adf.js";
 
@@ -113,4 +117,62 @@ export function formatSearch(
 ): string {
   if (format === "json") return JSON.stringify(response, null, 2);
   return formatIssueList(response.issues, "plain");
+}
+
+// ── Projects ──────────────────────────────────────────────────────
+
+export function formatProjects(
+  projects: JiraProjectDetail[],
+  format: OutputFormat,
+): string {
+  if (format === "json") return JSON.stringify(projects, null, 2);
+  if (projects.length === 0) return "No projects found.";
+
+  const header = "KEY\tNAME\tTYPE\tLEAD";
+  const rows = projects.map((p) =>
+    [p.key, p.name, p.projectTypeKey, p.lead?.displayName ?? "-"].join("\t"),
+  );
+  return [header, ...rows].join("\n");
+}
+
+// ── Boards ────────────────────────────────────────────────────────
+
+export function formatBoards(
+  boards: JiraBoard[],
+  format: OutputFormat,
+): string {
+  if (format === "json") return JSON.stringify(boards, null, 2);
+  if (boards.length === 0) return "No boards found.";
+
+  const header = "ID\tNAME\tTYPE\tPROJECT";
+  const rows = boards.map((b) =>
+    [b.id, b.name, b.type, b.location?.projectKey ?? "-"].join("\t"),
+  );
+  return [header, ...rows].join("\n");
+}
+
+// ── Sprints ───────────────────────────────────────────────────────
+
+export function formatSprints(
+  sprints: JiraSprint[],
+  format: OutputFormat,
+): string {
+  if (format === "json") return JSON.stringify(sprints, null, 2);
+  if (sprints.length === 0) return "No sprints found.";
+
+  const header = "ID\tNAME\tSTATE\tSTART\tEND";
+  const rows = sprints.map((s) =>
+    [s.id, s.name, s.state, s.startDate ?? "-", s.endDate ?? "-"].join("\t"),
+  );
+  return [header, ...rows].join("\n");
+}
+
+// ── Worklog ───────────────────────────────────────────────────────
+
+export function formatWorklog(
+  worklog: JiraWorklog,
+  format: OutputFormat,
+): string {
+  if (format === "json") return JSON.stringify(worklog, null, 2);
+  return `Logged ${worklog.timeSpent} (id: ${worklog.id})`;
 }
