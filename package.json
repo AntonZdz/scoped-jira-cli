@@ -1,0 +1,43 @@
+{
+  "name": "scoped-jira-cli",
+  "version": "0.1.0",
+  "description": "JIRA CLI with native support for Atlassian scoped access tokens",
+  "type": "module",
+  "bin": {
+    "sjira": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "jira",
+    "cli",
+    "atlassian",
+    "scoped-token",
+    "ci",
+    "cd",
+    "github-actions"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
