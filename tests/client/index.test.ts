@@ -71,14 +71,14 @@ describe("JiraClient", () => {
     it("caches Cloud ID across calls", async () => {
       const fetchMock = mockFetch([
         { status: 200, body: { cloudId: "cached-uuid" } },
-        { status: 200, body: { id: "1", key: "A-1", self: "...", fields: {} } },
-        { status: 200, body: { id: "2", key: "A-2", self: "...", fields: {} } },
+        { status: 200, body: { id: "1", key: "AA-1", self: "...", fields: {} } },
+        { status: 200, body: { id: "2", key: "AA-2", self: "...", fields: {} } },
       ]);
       vi.stubGlobal("fetch", fetchMock);
 
       const client = new JiraClient(mockConfig);
-      await client.getIssue("A-1");
-      await client.getIssue("A-2");
+      await client.getIssue("AA-1");
+      await client.getIssue("AA-2");
 
       // tenant_info called once, then two API calls = 3 total
       expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -286,6 +286,64 @@ describe("JiraClient", () => {
       expect(body.type.name).toBe("Blocks");
       expect(body.inwardIssue.key).toBe("PROJ-1");
       expect(body.outwardIssue.key).toBe("PROJ-2");
+    });
+  });
+
+  describe("input validation", () => {
+    it("rejects issue key with path traversal", async () => {
+      const client = new JiraClient(mockConfigWithCloudId);
+      await expect(client.getIssue("x/../../../search/jql")).rejects.toThrow(
+        /Invalid issue key format/,
+      );
+    });
+
+    it("rejects issue key with slashes", async () => {
+      const client = new JiraClient(mockConfigWithCloudId);
+      await expect(client.getIssue("PROJ/1")).rejects.toThrow(
+        /Invalid issue key format/,
+      );
+    });
+
+    it("rejects issue key with URL-encoded characters", async () => {
+      const client = new JiraClient(mockConfigWithCloudId);
+      await expect(client.getIssue("PROJ%2F1")).rejects.toThrow(
+        /Invalid issue key format/,
+      );
+    });
+
+    it("rejects lowercase issue key", async () => {
+      const client = new JiraClient(mockConfigWithCloudId);
+      await expect(client.getIssue("proj-1")).rejects.toThrow(
+        /Invalid issue key format/,
+      );
+    });
+
+    it("accepts valid issue keys", async () => {
+      const fetchMock = mockFetch([
+        { status: 200, body: { id: "1", key: "PROJ-1", self: "...", fields: {} } },
+      ]);
+      vi.stubGlobal("fetch", fetchMock);
+
+      const client = new JiraClient(mockConfigWithCloudId);
+      await client.getIssue("PROJ-123");
+
+      const url = fetchMock.mock.calls[0][0] as string;
+      expect(url).toContain("/issue/PROJ-123");
+    });
+
+    it("validates issue key across all methods", async () => {
+      const client = new JiraClient(mockConfigWithCloudId);
+      const bad = "x/../hack";
+
+      await expect(client.getIssue(bad)).rejects.toThrow(/Invalid issue key/);
+      await expect(client.updateIssue(bad, {})).rejects.toThrow(/Invalid issue key/);
+      await expect(client.deleteIssue(bad)).rejects.toThrow(/Invalid issue key/);
+      await expect(client.getTransitions(bad)).rejects.toThrow(/Invalid issue key/);
+      await expect(client.transitionIssue(bad, "1")).rejects.toThrow(/Invalid issue key/);
+      await expect(
+        client.addComment(bad, { version: 1, type: "doc", content: [] }),
+      ).rejects.toThrow(/Invalid issue key/);
+      await expect(client.getComments(bad)).rejects.toThrow(/Invalid issue key/);
     });
   });
 });

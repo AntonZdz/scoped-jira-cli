@@ -15,6 +15,25 @@ import type {
   AdfDocument,
 } from "./types.js";
 
+// ── Input validation ──────────────────────────────────────────────
+
+const ISSUE_KEY_RE = /^[A-Z][A-Z0-9_]+-\d+$/;
+const PROJECT_KEY_RE = /^[A-Z][A-Z0-9_]+$/;
+
+function validateIssueKey(key: string): string {
+  if (!ISSUE_KEY_RE.test(key)) {
+    throw new Error(`Invalid issue key format: "${key}". Expected format: PROJ-123`);
+  }
+  return encodeURIComponent(key);
+}
+
+function validateProjectKey(key: string): string {
+  if (!PROJECT_KEY_RE.test(key)) {
+    throw new Error(`Invalid project key format: "${key}". Expected format: PROJ`);
+  }
+  return encodeURIComponent(key);
+}
+
 export class JiraClient {
   private cloudId: string | null;
   private readonly authHeader: string;
@@ -110,19 +129,20 @@ export class JiraClient {
   }
 
   async getIssue(issueKey: string, fields?: string[]): Promise<JiraIssue> {
+    const safeKey = validateIssueKey(issueKey);
     const params = fields?.length ? `?fields=${fields.join(",")}` : "";
-    return this.request<JiraIssue>("GET", `/issue/${issueKey}${params}`);
+    return this.request<JiraIssue>("GET", `/issue/${safeKey}${params}`);
   }
 
   async updateIssue(
     issueKey: string,
     payload: IssueUpdatePayload,
   ): Promise<void> {
-    return this.request<void>("PUT", `/issue/${issueKey}`, payload);
+    return this.request<void>("PUT", `/issue/${validateIssueKey(issueKey)}`, payload);
   }
 
   async deleteIssue(issueKey: string): Promise<void> {
-    return this.request<void>("DELETE", `/issue/${issueKey}`);
+    return this.request<void>("DELETE", `/issue/${validateIssueKey(issueKey)}`);
   }
 
   // ── Transitions ─────────────────────────────────────────────────
@@ -130,7 +150,7 @@ export class JiraClient {
   async getTransitions(issueKey: string): Promise<TransitionsResponse> {
     return this.request<TransitionsResponse>(
       "GET",
-      `/issue/${issueKey}/transitions`,
+      `/issue/${validateIssueKey(issueKey)}/transitions`,
     );
   }
 
@@ -139,7 +159,7 @@ export class JiraClient {
     transitionId: string,
     fields?: Record<string, unknown>,
   ): Promise<void> {
-    return this.request<void>("POST", `/issue/${issueKey}/transitions`, {
+    return this.request<void>("POST", `/issue/${validateIssueKey(issueKey)}/transitions`, {
       transition: { id: transitionId },
       ...(fields && { fields }),
     });
@@ -153,7 +173,7 @@ export class JiraClient {
   ): Promise<JiraComment> {
     return this.request<JiraComment>(
       "POST",
-      `/issue/${issueKey}/comment`,
+      `/issue/${validateIssueKey(issueKey)}/comment`,
       { body },
     );
   }
@@ -163,9 +183,10 @@ export class JiraClient {
     startAt = 0,
     maxResults = 50,
   ): Promise<CommentsPage> {
+    const safeKey = validateIssueKey(issueKey);
     return this.request<CommentsPage>(
       "GET",
-      `/issue/${issueKey}/comment?startAt=${startAt}&maxResults=${maxResults}&orderBy=-created`,
+      `/issue/${safeKey}/comment?startAt=${startAt}&maxResults=${maxResults}&orderBy=-created`,
     );
   }
 
@@ -186,7 +207,7 @@ export class JiraClient {
   async getCreateMeta(projectKey: string): Promise<CreateMetaResponse> {
     return this.request<CreateMetaResponse>(
       "GET",
-      `/issue/createmeta/${projectKey}/issuetypes`,
+      `/issue/createmeta/${validateProjectKey(projectKey)}/issuetypes`,
     );
   }
 }
