@@ -202,7 +202,7 @@ describe("JiraClient", () => {
       expect(body.fields.issuetype.name).toBe("Bug");
     });
 
-    it("search sends POST to /search/jql", async () => {
+    it("search sends GET to /search/jql with query params", async () => {
       const fetchMock = mockFetch([
         {
           status: 200,
@@ -223,7 +223,12 @@ describe("JiraClient", () => {
 
       expect(result.issues).toHaveLength(1);
       const url = fetchMock.mock.calls[0][0] as string;
-      expect(url).toContain("/search/jql");
+      expect(url).toContain("/search/jql?");
+      expect(url).toContain("jql=project+%3D+PROJ");
+      expect(url).toContain("maxResults=10");
+      expect(url).toContain("fields=");
+      const options = fetchMock.mock.calls[0][1] as RequestInit;
+      expect(options.method).toBe("GET");
     });
 
     it("transitionIssue sends transition ID", async () => {

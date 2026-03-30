@@ -51,11 +51,11 @@ export function formatIssueList(
     const f = issue.fields;
     return [
       issue.key,
-      f.status.name,
-      f.issuetype.name,
-      f.priority?.name ?? "-",
-      f.assignee?.displayName ?? "Unassigned",
-      f.summary,
+      f?.status?.name ?? "-",
+      f?.issuetype?.name ?? "-",
+      f?.priority?.name ?? "-",
+      f?.assignee?.displayName ?? "Unassigned",
+      f?.summary ?? "-",
     ].join("\t");
   });
 
