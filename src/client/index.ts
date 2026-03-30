@@ -227,8 +227,24 @@ export class JiraClient {
 
   // ── Search ──────────────────────────────────────────────────────
 
+  private static readonly DEFAULT_SEARCH_FIELDS = [
+    "summary", "status", "issuetype", "priority",
+    "assignee", "reporter", "labels", "created", "updated",
+  ];
+
   async search(request: SearchRequest): Promise<SearchResponse> {
-    return this.request<SearchResponse>("POST", "/search/jql", request);
+    const params = new URLSearchParams({ jql: request.jql });
+    if (request.maxResults !== undefined) {
+      params.set("maxResults", String(request.maxResults));
+    }
+    const fields = request.fields?.length
+      ? request.fields
+      : JiraClient.DEFAULT_SEARCH_FIELDS;
+    params.set("fields", fields.join(","));
+    if (request.nextPageToken) {
+      params.set("nextPageToken", request.nextPageToken);
+    }
+    return this.request<SearchResponse>("GET", `/search/jql?${params.toString()}`);
   }
 
   // ── Metadata ────────────────────────────────────────────────────
